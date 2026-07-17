@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="girihotel">
+<html lang="en" data-theme="skp">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>SKP catering HOTEL — Morning Food Billing</title>
+<title>S.K.P Catering — Food Billing</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" type="text/css" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -94,6 +94,24 @@
 
   .no-scrollbar::-webkit-scrollbar{ display:none; }
   .no-scrollbar{ -ms-overflow-style:none; scrollbar-width:none; }
+
+  .tab-chip{
+    transition: all .2s ease;
+    white-space: nowrap;
+  }
+  .tab-chip.active{
+    background: linear-gradient(135deg, var(--orange-1), var(--orange-2));
+    color: #fff;
+    box-shadow: 0 8px 18px -6px rgba(234,88,12,.55);
+  }
+  .section-title{
+    letter-spacing: .02em;
+  }
+  .parcel-row{
+    border-top: 1px dashed rgba(234,88,12,.25);
+    margin-top: 6px;
+    padding-top: 6px;
+  }
 </style>
 </head>
 <body class="pb-40">
@@ -132,6 +150,8 @@
       <i class="fa-solid fa-moon"></i>
     </button>
   </div>
+  <!-- CATEGORY TABS -->
+  <div class="max-w-3xl mx-auto px-4 pb-3 flex gap-2 overflow-x-auto no-scrollbar" id="categoryTabs"></div>
 </header>
 
 <!-- FLOATING TOTAL BADGE -->
@@ -142,26 +162,8 @@
 
 <!-- MENU -->
 <main class="max-w-3xl mx-auto px-4 pt-5">
-  <div class="flex items-center gap-2 mb-3 px-1">
-    <i class="fa-solid fa-bowl-food text-orange-500"></i>
-    <h2 class="font-bold text-orange-800">Today's Menu</h2>
-  </div>
-  <div id="menuGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-4"></div>
+  <div id="menuSections"></div>
   <p id="noResults" class="hidden text-center text-orange-400 py-10"><i class="fa-solid fa-plate-wheat text-2xl mb-2"></i><br>No items match your search</p>
-
-  <!-- PARCEL CARD -->
-  <div class="glass rounded-2xl mt-6 p-4 shadow-md fade-up flex items-center justify-between">
-    <div class="flex items-center gap-3">
-      <div class="w-11 h-11 rounded-xl bg-amber-100 flex items-center justify-center text-orange-600">
-        <i class="fa-solid fa-box-open"></i>
-      </div>
-      <div>
-        <p class="font-bold text-orange-800 text-sm">Parcel Required</p>
-        <p class="text-xs text-orange-500/80">Adds ₹5 packing charge</p>
-      </div>
-    </div>
-    <input id="parcelCheck" type="checkbox" class="toggle toggle-warning">
-  </div>
 </main>
 
 <!-- STICKY BILL SUMMARY -->
@@ -197,8 +199,8 @@
   <div class="modal-pop bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden">
     <div class="btn-gradient text-white text-center py-5">
       <i class="fa-solid fa-hotel text-2xl mb-1"></i>
-      <h3 class="font-extrabold text-lg">GIRI HOTEL</h3>
-      <p class="text-xs opacity-90">Morning Food Bill</p>
+      <h3 class="font-extrabold text-lg">S.K.P Catering</h3>
+      <p class="text-xs opacity-90">Food Bill</p>
     </div>
     <div class="px-5 py-4 max-h-[45vh] overflow-y-auto no-scrollbar" id="billBody"></div>
     <div class="px-5 pb-2">
@@ -217,21 +219,74 @@
 </div>
 
 <footer class="text-center text-xs text-orange-500/70 pb-3">
-  Designed with ❤️ for GIRI HOTEL
+  Designed with ❤️ for S.K.P Catering
 </footer>
 
 <script>
 // ---------- DATA ----------
+// hasParcel: whether this item offers a per-item "+₹5 parcel" toggle
 const foods = [
-  { name:"Idly", unit:"Piece", price:10, qty:0, img:"https://as1.ftcdn.net/v2/jpg/07/11/64/26/1000_F_711642631_gPtU9J8xXr7FhxHVNhi9XZ5tKCcNU644.jpg" },
-  { name:"Poori", unit:"Piece", price:15, qty:0, img:"https://www.spiceupthecurry.com/wp-content/uploads/2016/01/poori-masala-recipe-12.jpg" },
-  { name:"Pongal", unit:"", price:40, qty:0, img:"https://i2.wp.com/www.vegrecipesofindia.com/wp-content/uploads/2016/04/ven-pongal-recipe.jpg" },
-  { name:"Vada", unit:"", price:10, qty:0, img:"https://myfoodstory.com/wp-content/uploads/2022/09/Medu-Vada-2-720x1080.jpg" },
-  { name:"Half Pongal", unit:"", price:20, qty:0, img:"https://i2.wp.com/www.vegrecipesofindia.com/wp-content/uploads/2016/04/ven-pongal-recipe.jpg" }
+  // ---------- MORNING ----------
+  { category:"Morning", name:"Idly", unit:"Piece", price:10, qty:0, parcel:false, hasParcel:true,
+    img:"https://as1.ftcdn.net/v2/jpg/07/11/64/26/1000_F_711642631_gPtU9J8xXr7FhxHVNhi9XZ5tKCcNU644.jpg" },
+  { category:"Morning", name:"Poori", unit:"Piece", price:15, qty:0, parcel:false, hasParcel:true,
+    img:"https://www.spiceupthecurry.com/wp-content/uploads/2016/01/poori-masala-recipe-12.jpg" },
+  { category:"Morning", name:"Pongal", unit:"", price:40, qty:0, parcel:false, hasParcel:true,
+    img:"https://i2.wp.com/www.vegrecipesofindia.com/wp-content/uploads/2016/04/ven-pongal-recipe.jpg" },
+  { category:"Morning", name:"Vada", unit:"", price:10, qty:0, parcel:false, hasParcel:true,
+    img:"https://myfoodstory.com/wp-content/uploads/2022/09/Medu-Vada-2-720x1080.jpg" },
+  { category:"Morning", name:"Half Pongal", unit:"", price:20, qty:0, parcel:false, hasParcel:true,
+    img:"https://i2.wp.com/www.vegrecipesofindia.com/wp-content/uploads/2016/04/ven-pongal-recipe.jpg" },
+
+  // ---------- RICE VARIETIES (Afternoon) ----------
+  { category:"Rice Varieties", name:"Coconut Rice", price:50, qty:0, parcel:false, hasParcel:true,
+    img:"https://www.shutterstock.com/image-photo/coconut-rice-popular-south-indian-600w-1768003133.jpg" },
+  { category:"Rice Varieties", name:"Lemon Rice", price:50, qty:0, parcel:false, hasParcel:true,
+    img:"https://www.shutterstock.com/image-photo/lemon-rice-popular-south-indian-600w-2529544641.jpg" },
+  { category:"Rice Varieties", name:"Sambar Rice", price:50, qty:0, parcel:false, hasParcel:true,
+    img:"https://www.shutterstock.com/image-photo/sambar-rice-tasty-popular-south-600w-1683911239.jpg" },
+  { category:"Rice Varieties", name:"Brinji Rice", price:70, qty:0, parcel:false, hasParcel:true,
+    img:"https://www.jeyashriskitchen.com/wp-content/uploads/2022/05/IMG_5400-1068x712.jpg" },
+  { category:"Rice Varieties", name:"Puthina Rice", price:50, qty:0, parcel:false, hasParcel:true,
+    img:"https://thephotowali.wordpress.com/wp-content/uploads/2021/04/img_20210426_1142236869746716687620986.jpg" },
+  { category:"Rice Varieties", name:"Curd Rice", price:50, qty:0, parcel:false, hasParcel:true,
+    img:"https://www.shutterstock.com/image-photo/homemade-curd-rice-indian-food-600w-539887351.jpg" },
+
+  // ---------- COMBO (no parcel) ----------
+  { category:"Combo", name:"Combo (Any Two Rice Varieties)", price:50, qty:0, parcel:false, hasParcel:false,
+    img:"https://rakskitchen.net/wp-content/uploads/2014/05/vaangi-baath.jpg" },
+
+  // ---------- SIDE DISH (no parcel) ----------
+  { category:"Side Dish", name:"Egg Gravy", price:20, qty:0, parcel:false, hasParcel:false,
+    img:"https://spiceeats.com/wp-content/uploads/2020/07/Egg-Gravy.jpg" },
+  { category:"Side Dish", name:"Chicken Gravy (Full)", price:70, qty:0, parcel:false, hasParcel:false,
+    img:"https://butfirstchai.com/wp-content/uploads/2022/08/pepper-chicken-gravy-served.jpg" },
+  { category:"Side Dish", name:"Chicken Gravy (Half)", price:35, qty:0, parcel:false, hasParcel:false,
+    img:"https://butfirstchai.com/wp-content/uploads/2022/08/pepper-chicken-gravy-served.jpg" }
 ];
 
-const grid = document.getElementById('menuGrid');
+const categories = ["All", "Morning", "Rice Varieties", "Combo", "Side Dish"];
+let activeCategory = "All";
+
+const menuSections = document.getElementById('menuSections');
 const noResults = document.getElementById('noResults');
+const categoryTabs = document.getElementById('categoryTabs');
+
+// ---------- CATEGORY TABS ----------
+function renderTabs(){
+  categoryTabs.innerHTML = "";
+  categories.forEach(cat=>{
+    const btn = document.createElement('button');
+    btn.className = "tab-chip px-4 py-1.5 rounded-full text-xs font-bold glass text-orange-700" + (cat===activeCategory ? " active" : "");
+    btn.textContent = cat;
+    btn.addEventListener('click', ()=>{
+      activeCategory = cat;
+      renderTabs();
+      renderMenu();
+    });
+    categoryTabs.appendChild(btn);
+  });
+}
 
 function foodCard(food, index){
   const div = document.createElement('div');
@@ -255,38 +310,71 @@ function foodCard(food, index){
         <i class="fa-solid fa-plus text-xs"></i>
       </button>
     </div>
+    ${food.hasParcel ? `
+    <div class="parcel-row flex items-center justify-between">
+      <span class="text-[11px] text-orange-600 font-semibold"><i class="fa-solid fa-box-open mr-1"></i>Parcel +₹5</span>
+      <input type="checkbox" class="parcel-check toggle toggle-xs toggle-warning" data-i="${index}">
+    </div>` : ``}
   `;
   return div;
 }
 
 function renderMenu(){
-  grid.innerHTML = "";
-  foods.forEach((f,i)=> grid.appendChild(foodCard(f,i)));
+  menuSections.innerHTML = "";
+  const grouped = {};
+  foods.forEach((f,i)=>{
+    if(activeCategory !== "All" && f.category !== activeCategory) return;
+    if(!grouped[f.category]) grouped[f.category] = [];
+    grouped[f.category].push(i);
+  });
+
+  Object.keys(grouped).forEach(cat=>{
+    const section = document.createElement('div');
+    section.className = "mb-6";
+    section.innerHTML = `
+      <div class="flex items-center gap-2 mb-3 px-1">
+        <i class="fa-solid fa-bowl-food text-orange-500"></i>
+        <h2 class="font-bold text-orange-800 section-title">${cat}</h2>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 food-grid"></div>
+    `;
+    const gridEl = section.querySelector('.food-grid');
+    grouped[cat].forEach(i=> gridEl.appendChild(foodCard(foods[i], i)));
+    menuSections.appendChild(section);
+  });
+
+  applySearchFilter();
 }
+renderTabs();
 renderMenu();
 
-// ---------- QTY LOGIC ----------
-grid.addEventListener('click', (e)=>{
+// ---------- QTY LOGIC (event delegation on container) ----------
+menuSections.addEventListener('click', (e)=>{
   const incBtn = e.target.closest('.inc');
   const decBtn = e.target.closest('.dec');
   if(!incBtn && !decBtn) return;
   const i = incBtn ? incBtn.dataset.i : decBtn.dataset.i;
   if(incBtn) foods[i].qty++;
   if(decBtn) foods[i].qty = Math.max(0, foods[i].qty - 1);
-  const valEl = grid.querySelector(`.qty-val[data-i="${i}"]`);
+  const valEl = menuSections.querySelector(`.qty-val[data-i="${i}"]`);
   valEl.textContent = foods[i].qty;
   valEl.classList.remove('pop'); void valEl.offsetWidth; valEl.classList.add('pop');
   calculateTotal();
 });
 
-// ---------- PARCEL ----------
-const parcelCheck = document.getElementById('parcelCheck');
-parcelCheck.addEventListener('change', calculateTotal);
+// ---------- PER-ITEM PARCEL TOGGLE ----------
+menuSections.addEventListener('change', (e)=>{
+  const chk = e.target.closest('.parcel-check');
+  if(!chk) return;
+  const i = chk.dataset.i;
+  foods[i].parcel = chk.checked;
+  calculateTotal();
+});
 
 // ---------- TOTALS ----------
 function calculateTotal(){
   const itemsTotal = foods.reduce((sum,f)=> sum + f.qty*f.price, 0);
-  const parcelCharge = parcelCheck.checked ? 5 : 0;
+  const parcelCharge = foods.reduce((sum,f)=> sum + ((f.hasParcel && f.parcel) ? f.qty*5 : 0), 0);
   const grand = itemsTotal + parcelCharge;
   updateUI(itemsTotal, parcelCharge, grand);
 }
@@ -300,22 +388,27 @@ function updateUI(itemsTotal, parcelCharge, grand){
 }
 
 // ---------- SEARCH ----------
-document.getElementById('searchBox').addEventListener('input', (e)=>{
-  const q = e.target.value.trim().toLowerCase();
+function applySearchFilter(){
+  const q = document.getElementById('searchBox').value.trim().toLowerCase();
   let visible = 0;
-  [...grid.children].forEach(card=>{
+  menuSections.querySelectorAll('.card-food').forEach(card=>{
     const match = card.dataset.name.includes(q);
     card.style.display = match ? "" : "none";
     if(match) visible++;
   });
+  menuSections.querySelectorAll('div.mb-6').forEach(section=>{
+    const anyVisible = [...section.querySelectorAll('.card-food')].some(c=> c.style.display !== "none");
+    section.style.display = anyVisible ? "" : "none";
+  });
   noResults.classList.toggle('hidden', visible !== 0);
-});
+}
+document.getElementById('searchBox').addEventListener('input', applySearchFilter);
 
 // ---------- CLEAR ----------
 document.getElementById('clearBtn').addEventListener('click', ()=>{
-  foods.forEach(f=> f.qty = 0);
-  parcelCheck.checked = false;
-  grid.querySelectorAll('.qty-val').forEach(el=> el.textContent = "0");
+  foods.forEach(f=>{ f.qty = 0; f.parcel = false; });
+  menuSections.querySelectorAll('.qty-val').forEach(el=> el.textContent = "0");
+  menuSections.querySelectorAll('.parcel-check').forEach(el=> el.checked = false);
   calculateTotal();
 });
 
@@ -337,20 +430,15 @@ function generateBill(){
     selected.forEach(f=>{
       const row = document.createElement('div');
       row.className = "flex justify-between text-sm py-1 text-orange-800";
-      row.innerHTML = `<span>${f.name} x${f.qty}</span><span>₹${f.qty*f.price}</span>`;
+      const parcelTag = (f.hasParcel && f.parcel) ? ` <span class="text-[10px] text-orange-500">(Parcel)</span>` : ``;
+      const lineTotal = f.qty*f.price + ((f.hasParcel && f.parcel) ? f.qty*5 : 0);
+      row.innerHTML = `<span>${f.name} x${f.qty}${parcelTag}</span><span>₹${lineTotal}</span>`;
       billBody.appendChild(row);
     });
   }
 
-  const parcelCharge = parcelCheck.checked ? 5 : 0;
-  if(parcelCharge > 0){
-    const row = document.createElement('div');
-    row.className = "flex justify-between text-sm py-1 text-orange-800";
-    row.innerHTML = `<span>Parcel</span><span>₹${parcelCharge}</span>`;
-    billBody.appendChild(row);
-  }
-
   const itemsTotal = selected.reduce((s,f)=> s+f.qty*f.price, 0);
+  const parcelCharge = selected.reduce((s,f)=> s + ((f.hasParcel && f.parcel) ? f.qty*5 : 0), 0);
   document.getElementById('modalGrandTotal').textContent = itemsTotal + parcelCharge;
 
   billModal.classList.remove('hidden'); billModal.classList.add('flex');
@@ -375,8 +463,8 @@ document.querySelectorAll('.ripple').forEach(btn=>{
 const darkToggle = document.getElementById('darkToggle');
 darkToggle.addEventListener('click', ()=>{
   const html = document.documentElement;
-  const isDark = html.getAttribute('data-theme') === 'girihotel-dark';
-  html.setAttribute('data-theme', isDark ? 'girihotel' : 'girihotel-dark');
+  const isDark = html.getAttribute('data-theme') === 'skp-dark';
+  html.setAttribute('data-theme', isDark ? 'skp' : 'skp-dark');
   darkToggle.innerHTML = isDark ? '<i class="fa-solid fa-moon"></i>' : '<i class="fa-solid fa-sun"></i>';
 });
 
